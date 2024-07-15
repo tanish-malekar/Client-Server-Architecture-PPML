@@ -1,0 +1,5 @@
+Write Functions
+Integrate Web Sockets
+
+Get good accuracy using normal dl
+
