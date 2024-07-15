@@ -144,7 +144,7 @@ def backward(dA,  cache, activation):
 
 
 
-def L_layer_backward(y_hat, Y, caches, layerdims):
+def L_lavyer_backward(y_hat, Y, caches, layerdims):
     ''' Backward Propogation from layer L to 1
     y_hat:  predicted output
     Y:      true values
