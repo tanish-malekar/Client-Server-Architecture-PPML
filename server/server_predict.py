@@ -65,9 +65,7 @@ def forward(A_prev, W, b, activation):
     # Activation Function
     A = calculateActivationFunction(Z, activation)
 
-    cache=(A_prev,W,b,Z)
-
-    return A, cache
+    return A
 
 
 def calculateActivationFunction(Z, activation):
@@ -89,6 +87,8 @@ def getActivation(Z, activation):
 
     if activation== "relu":
         A = np.maximum(0,Z)
+
+    return A
 
 
 
