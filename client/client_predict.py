@@ -21,6 +21,7 @@ def getEncryptedInput(input):
 
 def getResultFromOutputLayer(outputLayer):
     #dummy:
+    #decypt
     outputLayer=outputLayer.reshape(-1)
     predicted=np.where(outputLayer>0.5, 1, 0)
     return predicted

@@ -6,8 +6,8 @@ layerDims=[12288, 20, 7, 5, 1]
 
 def getOutputLayer(encryptedInput):
     encryptedParams = getEncryptedParameters()
-    outputLayer = l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerDims);
-    return outputLayer;
+    outputLayer = l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerDims)
+    return outputLayer
 
 def getEncryptedParameters():
     #fetch encryptedParams from DB and return
@@ -72,7 +72,9 @@ def forward(A_prev, W, b, activation):
 
 def calculateActivationFunction(Z, activation):
     #add noise to layer
-    return getActivationFromClient(Z, activation)
+    activationFromClient= getActivationFromClient(Z, activation)
+    #remove noise
+    return activationFromClient
 
 def getActivationFromClient(Z, activation):
     #call client
