@@ -1,5 +1,5 @@
-import pickle;
-import numpy as np;
+import pickle
+import numpy as np
 
 
 layerDims=[12288, 20, 7, 5, 1]
