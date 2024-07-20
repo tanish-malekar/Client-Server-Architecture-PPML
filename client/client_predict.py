@@ -17,6 +17,7 @@ def getPrediction(input):
 
 
 def getEncryptedInput(input):
+    #dummy:
     return input
 
 def getResultFromOutputLayer(outputLayer):
