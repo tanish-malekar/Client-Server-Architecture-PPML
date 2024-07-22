@@ -69,8 +69,10 @@ def forward(A_prev, W, b, activation):
 
 
 def calculateActivationFunction(Z, activation):
+    #dummy
     #add noise to layer
     activationFromClient= getActivationFromClient(Z, activation)
+    #dummy
     #remove noise
     return activationFromClient
 
