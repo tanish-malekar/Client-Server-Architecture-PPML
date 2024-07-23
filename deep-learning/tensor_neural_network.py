@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 from keras_tuner import RandomSearch
 
-data = pd.read_csv('dataset/Churn_Modelling.csv')
+data = pd.read_csv('dataset/Liver_disease_data.csv')
 
 # Separate features and target
 X = data.drop(columns=['Diagnosis'])
@@ -56,7 +56,7 @@ tuner = RandomSearch(
     max_trials=10,
     executions_per_trial=2,
     directory='tuner',
-    project_name='churn_modelling_prediction_1'
+    project_name='liver_disease_prediction_6'
 )
 
 # Perform hyperparameter tuning
