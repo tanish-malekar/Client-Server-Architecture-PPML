@@ -2,22 +2,19 @@ import numpy as np
 from Pyfhel import Pyfhel
 
 HE = Pyfhel()           # Creating empty Pyfhel object
+n_mults = 10
 ckks_params = {
-    'scheme': 'CKKS',   # can also be 'ckks'
-    'n': 2**14,         # Polynomial modulus degree. For CKKS, n/2 values can be
-                        #  encoded in a single ciphertext.
-                        #  Typ. 2^D for D in [10, 15]
-    'scale': 2**30,     # All the encodings will use it for float->fixed point
-                        #  conversion: x_fix = round(x_float * scale)
-                        #  You can use this as default scale or use a different
-                        #  scale on each operation (set in HE.encryptFrac)
-    'qi_sizes': [60, 30, 30, 30, 60] # Number of bits of each prime in the chain.
-                        # Intermediate values should be  close to log2(scale)
-                        # for each operation, to have small rounding errors.
+    'scheme': 'CKKS',
+    'n': 2**14,         # For CKKS, n/2 values can be encoded in a single ciphertext. 
+    'scale': 2**31,     # Each multiplication grows the final scale
+    'qi_sizes': [60]+ [30]*n_mults +[60] # Number of bits of each prime in the chain. 
+                        # Intermediate prime sizes should be close to log2(scale).
+                        # One per multiplication! More/higher qi_sizes means bigger 
+                        #  ciphertexts and slower ops.
 }
 HE.contextGen(**ckks_params)  # Generate context for ckks scheme
 HE.keyGen()             # Key Generation: generates a pair of public/secret keys
-HE.rotateKeyGen()
+HE.relinKeyGen()
 
 
 
@@ -35,6 +32,12 @@ def decryptMatrix(encrypted_matrix, HE):
         decrypted_row = [HE.decrypt(val)[0] for val in row]
         decrypted_matrix.append(decrypted_row)
     return decrypted_matrix
+
+def multipleCiphers(x, y):
+    res = x * y
+    res = ~(res)
+    return res
+
 
 
 
