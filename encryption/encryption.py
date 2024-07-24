@@ -21,10 +21,29 @@ HE.rotateKeyGen()
 
 
 
-arr_x = np.array([1, 2, 3, 4], dtype=np.float64)    # Always use type float64!
 
-encrypted_x = [HE.encrypt(val) for val in arr_x]
+def encryptMatrix(matrix, HE):
+    encrypted_matrix = []
+    for row in matrix:
+        encrypted_row = [HE.encrypt(val) for val in row]
+        encrypted_matrix.append(encrypted_row)
+    return encrypted_matrix
 
-decrypted_x = [HE.decrypt(val) for val in encrypted_x]
+def decryptMatrix(encrypted_matrix, HE):
+    decrypted_matrix = []
+    for row in encrypted_matrix:
+        decrypted_row = [HE.decrypt(val)[0] for val in row]
+        decrypted_matrix.append(decrypted_row)
+    return decrypted_matrix
 
-print(decrypted_x)
+
+
+
+
+
+
+
+
+
+
+    
