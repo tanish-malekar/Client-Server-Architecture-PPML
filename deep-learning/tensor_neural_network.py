@@ -1,10 +1,12 @@
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 from keras_tuner import RandomSearch
+import pickle
 
-data = pd.read_csv('dataset/Churn_Modelling.csv')
+data = pd.read_csv('dataset/Liver_disease_data.csv')
 
 # Separate features and target
 X = data.drop(columns=['Diagnosis'])
@@ -31,9 +33,9 @@ def build_model(hp):
     model = keras.Sequential()
     
     # Tune the number of layers
-    for i in range(hp.Int('num_layers', 1, 4)):
+    for i in range(hp.Int('num_layers', 4, 6)):
         model.add(keras.layers.Dense(
-            units=hp.Int('units_' + str(i), min_value=32, max_value=512, step=32),
+            units=hp.Int('units_' + str(i), min_value=2, max_value=100, step=5),
             activation=hp.Choice('activation_' + str(i), ['relu', 'tanh', 'sigmoid'])
         ))
         
@@ -53,10 +55,10 @@ def build_model(hp):
 tuner = RandomSearch(
     build_model,
     objective='val_accuracy',
-    max_trials=10,
+    max_trials=25,
     executions_per_trial=2,
     directory='tuner',
-    project_name='churn_modelling_prediction_1'
+    project_name='liver_disease_prediction_10'
 )
 
 # Perform hyperparameter tuning
@@ -73,3 +75,28 @@ best_model.fit(X_train, y_train, epochs=50, validation_split=0.2)
 # Evaluate the model on the test set
 loss, accuracy = best_model.evaluate(X_test, y_test)
 print(f'Test Accuracy: {accuracy:.4f}')
+
+model_details = {}
+weights = []
+biases = []
+
+for layer in best_model.layers:
+    layer_weights =  layer.get_weights()
+    if len(layer_weights) > 0:
+        weights.append(layer_weights[0].tolist())
+        biases.append(layer_weights[1].tolist())
+
+for i in range(len(weights)):
+    x = np.array(weights[i])
+    y = np.array(biases[i])
+    print(x.shape, y.shape)
+    model_details[f"W{i+1}"] = weights[i]
+    model_details[f"b{i+1}"] = biases[i]
+
+# Save the model details to a file
+with open('model_details.py', 'w') as file:
+    file.write(repr(model_details))
+
+    # Save the model details to a .pkl file
+with open('model_details.pkl', 'wb') as file:
+    pickle.dump(model_details, file)
