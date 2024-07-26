@@ -87,11 +87,8 @@ for layer in best_model.layers:
         biases.append(layer_weights[1].tolist())
 
 for i in range(len(weights)):
-    x = np.array(weights[i])
-    y = np.array(biases[i])
-    print(x.shape, y.shape)
-    model_details[f"W{i+1}"] = weights[i]
-    model_details[f"b{i+1}"] = biases[i]
+    model_details[f"W{i+1}"] = np.array(weights[i])
+    model_details[f"b{i+1}"] = np.array(biases[i])
 
 # Save the model details to a file
 with open('model_details.py', 'w') as file:
