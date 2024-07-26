@@ -1,5 +1,7 @@
 import pickle
 import numpy as np
+from encryption import decryptMatrix, multipleCiphers, encryptMatrix
+import sqlite3
 
 
 layerDims=[12288, 20, 7, 5, 1]
@@ -10,10 +12,22 @@ def getOutputLayer(encryptedInput):
     return outputLayer
 
 def getEncryptedParameters():
-    #fetch encryptedParams from DB and return
-    #dummy:
-    parameters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/parameters.pkl", 'rb'))
-    return parameters
+    # TODO: Load encrypted parameter from db
+    paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/parameters.pkl", 'rb'))
+    
+    # to test without db: 
+    # encryptedParameters = encryptParameters(parameters)
+    # return encryptedParameters
+
+
+    return paramaters
+
+def encryptParameters(parameters):
+    encryptedParameters = {}
+    for key, value in parameters.items():
+        encryptedParameters[key] = encryptMatrix(value)
+    return encryptedParameters
+
 
 def l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerdims):
     ''' Forward propagation for L-layer
@@ -68,17 +82,36 @@ def forward(A_prev, W, b, activation):
     return A
 
 
+def add_random_noise(Z):
+    noise_indices = []
+    
+    # Flatten Z and compute min and max values
+    Z_flat = Z.flatten()
+    min_val, max_val = Z_flat.min(), Z_flat.max()
+    
+    Z_noisy = []
+    for i in range(len(Z)):
+        if np.random.rand() > 0.5:  # Randomly decide whether to add noise
+            noise = np.random.uniform(min_val, max_val, 1)  # Generate random value within the range
+            Z_noisy.append(noise)  # Append noise
+            noise_indices.append(len(Z_noisy))  # Record index where noise was added
+        Z_noisy.append(Z[i])
+    
+    return np.array(Z_noisy), noise_indices
+
+def remove_noise(Z, noise_indices):
+    Z_cleaned = np.delete(Z, noise_indices, 0)
+    return Z_cleaned
+
+
 def calculateActivationFunction(Z, activation):
-    #dummy
-    #add noise to layer
-    activationFromClient= getActivationFromClient(Z, activation)
-    #dummy
-    #remove noise
-    return activationFromClient
+    Z_noisy, noise_indices = add_random_noise(Z)
+    activationFromClient= getActivationFromClient(Z_noisy, activation)
+    activationFromClient_cleaned = remove_noise(activationFromClient, noise_indices)
+    return activationFromClient_cleaned
 
 def getActivationFromClient(Z, activation):
-    #call client
-    #dummy:
+    # TODO: Call client to get activation
     return getActivation(Z, activation)
 
 
@@ -93,5 +126,23 @@ def getActivation(Z, activation):
     return A
 
 
+def initializeServer(publickKey64, context64, relinKey64):
+    
+
+    # conn = sqlite3.connect('ppml.db')
+    # cursor = conn.cursor()
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS user_para
+    #     (id INTEGER PRIMARY KEY,
+    #     parameters TEXT)
+    # ''')
+
+    # paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/parameters.pkl", 'rb'))
+    # encryptedParameters = encryptParameters(paramaters)
+    # # TODO to complete
+
+
+
+    
 
 

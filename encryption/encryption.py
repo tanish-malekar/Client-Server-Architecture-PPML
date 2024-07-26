@@ -1,52 +1,52 @@
 import numpy as np
 from Pyfhel import Pyfhel
+import concurrent.futures
 
-HE = Pyfhel()           # Creating empty Pyfhel object
-n_mults = 10
-ckks_params = {
-    'scheme': 'CKKS',
-    'n': 2**14,         # For CKKS, n/2 values can be encoded in a single ciphertext. 
-    'scale': 2**31,     # Each multiplication grows the final scale
-    'qi_sizes': [60]+ [30]*n_mults +[60] # Number of bits of each prime in the chain. 
-                        # Intermediate prime sizes should be close to log2(scale).
-                        # One per multiplication! More/higher qi_sizes means bigger 
-                        #  ciphertexts and slower ops.
-}
-HE.contextGen(**ckks_params)  # Generate context for ckks scheme
-HE.keyGen()             # Key Generation: generates a pair of public/secret keys
-HE.relinKeyGen()
+def initialize_HE():
+    n_mults = 10
+    ckks_params = {
+        'scheme': 'CKKS',
+        'n': 2**14,
+        'scale': 2**31,
+        'qi_sizes': [60] + [30]*n_mults + [60]
+    }
+    HE = Pyfhel()
+    HE.contextGen(**ckks_params)
+    HE.keyGen()
+    HE.relinKeyGen()
+    return HE
 
+HE = initialize_HE()
 
+def encryptMatrix(matrix):
+    matrix = np.array(matrix)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        encrypted_matrix = list(executor.map(HE.encrypt, matrix.flat))
+    return np.array(encrypted_matrix).reshape(matrix.shape)
 
-
-def encryptMatrix(matrix, HE):
-    encrypted_matrix = []
-    for row in matrix:
-        encrypted_row = [HE.encrypt(val) for val in row]
-        encrypted_matrix.append(encrypted_row)
-    return encrypted_matrix
-
-def decryptMatrix(encrypted_matrix, HE):
-    decrypted_matrix = []
-    for row in encrypted_matrix:
-        decrypted_row = [HE.decrypt(val)[0] for val in row]
-        decrypted_matrix.append(decrypted_row)
-    return decrypted_matrix
+def decryptMatrix(encrypted_matrix):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        decrypted_matrix = list(executor.map(lambda x: HE.decrypt(x)[0], encrypted_matrix.flat))
+    return np.array(decrypted_matrix).reshape(encrypted_matrix.shape)
 
 def multipleCiphers(x, y):
     res = x * y
     res = ~(res)
     return res
 
+# if __name__ == '__main__':
+#     mat1 = np.array([[1, 2], [3, 4]])
+#     mat2 = np.array([[5, 6], [7, 8]])
 
+#     eMat1 = encryptMatrix(mat1)
+#     eMat2 = encryptMatrix(mat2)
 
+#     # Perform dot product on encrypted matrices
+#     res = np.dot(eMat1, eMat2)
 
+#     dRes = decryptMatrix(res)
 
-
-
-
-
-
-
-
-    
+#     print("Decrypted result:")
+#     print(dRes)
+#     print("\nExpected result:")
+#     print(np.dot(mat1, mat2))
