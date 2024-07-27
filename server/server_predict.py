@@ -1,10 +1,22 @@
 import pickle
 import numpy as np
-from encryption import decryptMatrix, multipleCiphers, encryptMatrix
+import time
+
 import sqlite3
+import json
+from Pyfhel import Pyfhel
+import base64
+import os
+import sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../client')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../encryption')))
 
-layerDims=[12288, 20, 7, 5, 1]
+from shared_functions import getActivation
+from encryption import decryptMatrix, multipleCiphers, encryptMatrix
+
+layerDims=[10, 47, 62, 67, 72, 62, 1]
+activationFunctions = ["tanh", "tanh", "tanh", "sigmoid", "relu", "sigmoid"]
 
 def getOutputLayer(encryptedInput):
     encryptedParams = getEncryptedParameters()
@@ -12,71 +24,49 @@ def getOutputLayer(encryptedInput):
     return outputLayer
 
 def getEncryptedParameters():
-    # TODO: Load encrypted parameter from db
-    paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/parameters.pkl", 'rb'))
-    
-    # to test without db: 
-    # encryptedParameters = encryptParameters(parameters)
+    # conn = sqlite3.connect('ppml.db')
+    # cursor = conn.cursor()
+    # cursor.execute('''
+    #     SELECT encrypted_parameters FROM user_details WHERE id = 1
+    # ''')
+    # encryptedParameters = json.loads(cursor.fetchone()[0])
     # return encryptedParameters
 
-
+    print("reading encrypted parameters...")
+    paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/client/encrypted_parameters.pkl", 'rb'))    
+    print(type(paramaters))
+    print(paramaters.keys())
     return paramaters
 
-def encryptParameters(parameters):
+    # paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/deep-learning/model_details.pkl", 'rb'))
+    # return paramaters
+
+def encryptParameters(parameters, HE):
+    print("encrypting parameters...")
     encryptedParameters = {}
     for key, value in parameters.items():
-        encryptedParameters[key] = encryptMatrix(value)
+        encryptedParameters[key] = encryptMatrix(value, HE)
+    print("encryption done.")
     return encryptedParameters
 
 
 def l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerdims):
-    ''' Forward propagation for L-layer
-
-    [LINEAR -> RELU]*(L-1)   ->    LINEAR->SIGMOID
-
-    X: Input matrix (input size/no. of features, no. of examples/BatchSize)
-    parameters: dict of {W1,b1 ,W2,b2, ...}
-    layerdims: Vector, no. of units in each layer  (no. of layers,)
-
-    Returns:
-    y_hat: Output of Forward Propagation
-    caches: (A_prev,W,b,Z) *(L-1 times , of 1,2,..L layers)
-    '''
-
     L =  len(layerdims)-1
     A = encryptedInput
 
-
-    # L[0] is units for Input layer
-    # [LINEAR -> RELU]*(L-1)    Forward for L-1 layers
-    for l in range(1,L):
+    for l in range(1,L+1):
         A_prev = A
-        A = forward(A_prev, encryptedParams["W"+str(l)], encryptedParams["b"+str(l)], "relu")
-    
+        A = forward(A_prev, encryptedParams["W"+str(l)], encryptedParams["b"+str(l)], activationFunctions[l-1])
 
-    # Forward for Last layer
-    # [Linear -> sigmoid]
-    outputLayer =forward(A, encryptedParams["W"+str(l+1)], encryptedParams["b"+str(l+1)], "sigmoid")
-  
-
-    return outputLayer
+    return A
 
 
 def forward(A_prev, W, b, activation):
-    ''' Forward Propagation for Single layer
-    A_prev: Activation from previous layer (size of previous layer, Batch_size)
-        A[0] = X
-    W: Weight matrix (size of current layer, size of previous layer)
-    b: bias vector, (size of current layer, 1)
+    
+ 
+    Z = np.add( np.dot(A_prev, W), b)
 
-    Returns:
-    A: Output of Single layer
-    cache = (A_prev,W,b,Z), these will be used while backpropagation
-    '''
-    # Linear
-    Z = np.add( np.dot(W,A_prev), b)
 
-    # Activation Function
     A = calculateActivationFunction(Z, activation)
 
     return A
@@ -105,44 +95,44 @@ def remove_noise(Z, noise_indices):
 
 
 def calculateActivationFunction(Z, activation):
-    Z_noisy, noise_indices = add_random_noise(Z)
-    activationFromClient= getActivationFromClient(Z_noisy, activation)
-    activationFromClient_cleaned = remove_noise(activationFromClient, noise_indices)
-    return activationFromClient_cleaned
+    # Z_noisy, noise_indices = add_random_noise(Z)
+    # activationFromClient= getActivationFromClient(Z_noisy, activation)
+    # activationFromClient_cleaned = remove_noise(activationFromClient, noise_indices)
+    # return activationFromClient_cleaned
+    return getActivationFromClient(Z, activation)
+
 
 def getActivationFromClient(Z, activation):
     # TODO: Call client to get activation
     return getActivation(Z, activation)
 
 
-#should be in client
-def getActivation(Z, activation):
-    if activation== "sigmoid":
-        A=1/(1+np.exp(-Z))
-
-    if activation== "relu":
-        A = np.maximum(0,Z)
-
-    return A
-
-
 def initializeServer(publickKey64, context64, relinKey64):
-    
-
+    print("hi from server")
     # conn = sqlite3.connect('ppml.db')
     # cursor = conn.cursor()
     # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS user_para
+    #     CREATE TABLE IF NOT EXISTS user_details
     #     (id INTEGER PRIMARY KEY,
-    #     parameters TEXT)
+    #     encrypted_parameters TEXT)
     # ''')
 
-    # paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/parameters.pkl", 'rb'))
-    # encryptedParameters = encryptParameters(paramaters)
-    # # TODO to complete
+    HE = Pyfhel()
+    HE.from_bytes_context(base64.b64decode(context64))
+    HE.from_bytes_public_key(base64.b64decode(publickKey64))
+    HE.from_bytes_relin_key(base64.b64decode(relinKey64))
 
+    paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/deep-learning/model_details.pkl", 'rb'))
+    curr_time = time.time()
+    encryptedParameters = encryptParameters(paramaters, HE)
+    print("Encryption time: ", time.time() - curr_time)
+    with open('encrypted_parameters.pkl', 'wb') as file:
+        pickle.dump(encryptedParameters, file)
 
-
+   
+    # encryptedParametersJSON = json.dumps(encryptedParameters)
     
-
-
+    # cursor.execute('''
+    #     INSERT INTO user_details (id, encrypted_parameters)
+    #     VALUES (?, ?)
+    # ''', (1, encryptedParametersJSON ))
