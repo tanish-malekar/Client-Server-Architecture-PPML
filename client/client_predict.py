@@ -1,7 +1,8 @@
 import numpy as np
-from Pyfhel import Pyfhel
+from Pyfhel import Pyfhel, PyPtxt
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import time
 
 
 import sys
@@ -13,16 +14,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../serv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../encryption')))
 
 from server_predict import getOutputLayer, initializeServer
-from encryption import decryptMatrix, multipleCiphers, encryptMatrix
+from encryption import decryptMatrix, encryptMatrix
 
 
 def initialize_HE():
     n_mults = 10
     ckks_params = {
         'scheme': 'CKKS',
-        'n': 2**14,
+        'n': 2**15,
         'scale': 2**31,
-        'qi_sizes': [60] + [30]*n_mults + [60]
+        'qi_sizes': [60] + [31]*n_mults + [60]
     }
     HE = Pyfhel()
     HE.contextGen(**ckks_params)
@@ -36,6 +37,7 @@ HE.save_context("context")
 HE.save_public_key( "pub.key")
 HE.save_secret_key("sec.key")
 HE.save_relin_key("relin.key")
+
 
 def initiateConnection():
     publicKey = HE.to_bytes_public_key(compr_mode=u'zstd')
@@ -53,7 +55,9 @@ def sendInitializationToServer(publickKey64, context64, relinKey64):
 
 
 def getPrediction(input):
+    timec = time.time()
     encryptedInput = getEncryptedInput(input)
+    print("Time for input encryption: ", time.time() - timec)
 
     publicKey = HE.to_bytes_public_key(compr_mode=u'zstd')
     publickKey64 = base64.b64encode(publicKey).decode('utf-8')
@@ -73,14 +77,15 @@ def getEncryptedInput(input):
     # return input
 
 def getResultFromOutputLayer(outputLayer):
-    # decryptedOutputLayer = decryptMatrix(outputLayer, HE)
-    # decryptedOutputLayer=decryptedOutputLayer.reshape(-1)
-    # predicted=np.where(decryptedOutputLayer>0.5, 1, 0)
-    # return predicted
-    print(outputLayer)
-    outputLayer=outputLayer.reshape(-1)
-    predicted=np.where(outputLayer>0.5, 1, 0)
+    decryptedOutputLayer = decryptMatrix(outputLayer, HE)
+    print(decryptedOutputLayer)
+    decryptedOutputLayer=decryptedOutputLayer.reshape(-1)
+    predicted=np.where(decryptedOutputLayer>0.5, 1, 0)
     return predicted
+    # print(outputLayer)
+    # outputLayer=outputLayer.reshape(-1)
+    # predicted=np.where(outputLayer>0.5, 1, 0)
+    # return predicted
 
 def getOutputLayerFromServer(encryptedInput, publickKey64, context64, relinKey64):
     # TODO: Call server to get output layer
@@ -108,8 +113,32 @@ def main():
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
     print("Actual: ", Y.values[0])
+    timec = time.time()
     print("Predicted: ", getPrediction(X[0]))
-    #initiateConnection()
+    print("total Time taken: ", time.time() - timec)
+
+    # initiateConnection()
+    # n_mults = 10
+    # ckks_params = {
+    #     'scheme': 'CKKS',
+    #     'n': 2**15,
+    #     'scale': 2**31,
+    #     'qi_sizes': [60] + [31]*n_mults + [60]
+    # }
+    # HE1 = Pyfhel()
+    # HE1.contextGen(**ckks_params)
+    # PT = PyPtxt(pyfhel=HE1)
+    # a = 5
+    # eA = PT.encode(a)
+    # HE2 = Pyfhel()
+    # HE2.contextGen(**ckks_params)
+    # HE2.keyGen()
+    # HE2.relinKeyGen()
+    # b = 2
+    # eB = HE2.encrypt(b)
+    # res = HE1.multiply_plain(eB, eA)
+    # print(HE1.decrypt(res))
+
 
     
 

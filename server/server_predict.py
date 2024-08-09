@@ -1,10 +1,11 @@
 import pickle
 import numpy as np
 import time
+import hickle as hkl
 
 import sqlite3
 import json
-from Pyfhel import Pyfhel
+from Pyfhel import Pyfhel, PyPtxt
 import base64
 import os
 import sys
@@ -13,17 +14,22 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../clie
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../encryption')))
 
 from shared_functions import getActivation
-from encryption import decryptMatrix, multipleCiphers, encryptMatrix
+from encryption import decryptMatrix, encryptMatrix, encryptMatrixTo64, getEncodedParametersFromBytes, encrypted_dot_product, encodeMatrix, encodeMatrixToBytes
 
 layerDims=[10, 47, 62, 67, 72, 62, 1]
 activationFunctions = ["tanh", "tanh", "tanh", "sigmoid", "relu", "sigmoid"]
 
-def getOutputLayer(encryptedInput):
-    encryptedParams = getEncryptedParameters()
-    outputLayer = l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerDims)
+def getOutputLayer(encryptedInput, publickKey64, context64, relinKey64):
+    HE = Pyfhel()
+    HE.from_bytes_context(base64.b64decode(context64))
+    HE.from_bytes_public_key(base64.b64decode(publickKey64))
+    HE.from_bytes_relin_key(base64.b64decode(relinKey64))
+    encryptedParams = getEncodedParameters(HE)
+    outputLayer = l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerDims, HE)
     return outputLayer
 
-def getEncryptedParameters():
+
+def getEncodedParameters(HE):
     # conn = sqlite3.connect('ppml.db')
     # cursor = conn.cursor()
     # cursor.execute('''
@@ -33,38 +39,48 @@ def getEncryptedParameters():
     # return encryptedParameters
 
     print("reading encrypted parameters...")
-    paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/client/encrypted_parameters.pkl", 'rb'))    
-    print(type(paramaters))
-    print(paramaters.keys())
-    return paramaters
+    timec = time.time()
+    paramatersInBytes=hkl.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/client/encodedParameters.hkl", 'rb'))    
+    print("Time for reading encoeded byte parameters: ", time.time() - timec)
+    timec = time.time()
+    encodedParameters = getEncodedParametersFromBytes(paramatersInBytes, HE)
+    print("Time for getting encoded parameters: ", time.time() - timec)
+    return encodedParameters
 
     # paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/deep-learning/model_details.pkl", 'rb'))
     # return paramaters
 
-def encryptParameters(parameters, HE):
-    print("encrypting parameters...")
-    encryptedParameters = {}
+    # paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/deep-learning/model_details.pkl", 'rb'))
+    # return encodeParameters(paramaters, HE)
+
+
+def encodeParameters(parameters, HE):
+    print("encoding parameters...")
+    encodedParameters = {}
     for key, value in parameters.items():
-        encryptedParameters[key] = encryptMatrix(value, HE)
-    print("encryption done.")
-    return encryptedParameters
+        encodedParameters[key] = encodeMatrixToBytes(value, HE)
+    print("encoding done.")
+    print(encodedParameters["W1"])
+    print(type(encodedParameters["W1"][0][0]))
+    return encodedParameters
 
 
-def l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerdims):
+def l_LayerForwardEncrypted(encryptedInput, encryptedParams, layerdims, HE):
     L =  len(layerdims)-1
     A = encryptedInput
 
     for l in range(1,L+1):
         A_prev = A
-        A = forward(A_prev, encryptedParams["W"+str(l)], encryptedParams["b"+str(l)], activationFunctions[l-1])
+        print("layer: ", l)
+        A = forward(A_prev, encryptedParams["W"+str(l)], encryptedParams["b"+str(l)], activationFunctions[l-1], HE)
 
     return A
 
 
-def forward(A_prev, W, b, activation):
+def forward(A_prev, W, b, activation, HE):
     
- 
-    Z = np.add( np.dot(A_prev, W), b)
+    
+    Z = np.add(encrypted_dot_product(A_prev, W, HE), b)
 
 
     A = calculateActivationFunction(Z, activation)
@@ -123,11 +139,17 @@ def initializeServer(publickKey64, context64, relinKey64):
     HE.from_bytes_relin_key(base64.b64decode(relinKey64))
 
     paramaters=pickle.load(open("/Users/tanishmalekar/Library/CloudStorage/OneDrive-BajajFinanceLimited/Desktop/Research Paper/deep-learning/model_details.pkl", 'rb'))
+  
     curr_time = time.time()
-    encryptedParameters = encryptParameters(paramaters, HE)
-    print("Encryption time: ", time.time() - curr_time)
-    with open('encrypted_parameters.pkl', 'wb') as file:
-        pickle.dump(encryptedParameters, file)
+    encodedParameters = encodeParameters(paramaters, HE)
+    print("Encoding time: ", time.time() - curr_time)
+    # with open('encrypted_parameters.pkl', 'wb') as file:
+    #     pickle.dump(encryptedParameters, file)
+    print("dumping parameters...")
+    curr_time = time.time()
+    hkl.dump(encodedParameters, 'encodedParameters.hkl', mode='wb')
+    print("dumping time: ", time.time() - curr_time)
+    print("dumping done.")
 
    
     # encryptedParametersJSON = json.dumps(encryptedParameters)

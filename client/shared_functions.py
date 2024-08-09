@@ -11,10 +11,10 @@ from encryption import decryptMatrix, encryptMatrix
 def getActivation(Z, activation):
 
     HE = Pyfhel()
-    HE.load_context("/context")
-    HE.load_public_key( "/pub.key")
-    HE.load_secret_key("/sec.key")
-    HE.load_relin_key("/relin.key")
+    HE.load_context("context")
+    HE.load_public_key( "pub.key")
+    HE.load_secret_key("sec.key")
+    HE.load_relin_key("relin.key")
 
     Z_decrypted = decryptMatrix(Z, HE)
 
