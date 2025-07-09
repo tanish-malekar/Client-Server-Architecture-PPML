@@ -1,6 +1,6 @@
 # 🧬 Privacy-Preserving Liver Disease Prediction with Homomorphic Encryption
 
-Research Paper: https://drive.google.com/file/d/1cWSbJfrUPq2okGLezd5frDsTuqPGLJ18/view
+Research Paper: https://drive.google.com/file/d/1cWSbJfrUPq2okGLezd5frDsTuqPGLJ18/view ## 
 A secure, client-server framework for liver disease prediction using **CKKS Homomorphic Encryption** and a deep learning model, enabling privacy-preserving inference on sensitive medical data.
 
 ---
