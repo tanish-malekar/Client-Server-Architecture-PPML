@@ -117,7 +117,8 @@ This project introduces a privacy-preserving protocol using a **Feedforward Neur
 
 ## 📚 References
 
-Full reference list is available in the [paper](./ppml_paper.pdf).
+Full reference list is available in the [paper](.https://drive.google.com/file/d/1cWSbJfrUPq2okGLezd5frDsTuqPGLJ18/view 
+).
 
 ---
 
