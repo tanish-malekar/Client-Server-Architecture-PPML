@@ -6,26 +6,15 @@ A distributed **client–server framework** for privacy-preserving medical infer
 
 ---
 
-## 📌 Overview
-
-This project demonstrates how to combine modern cryptography and distributed systems to enable privacy-preserving inference in healthcare.  
-
-- 🔒 Patient data is never exposed — inputs remain encrypted end-to-end.  
-- 🛡️ Model confidentiality is preserved — server parameters are never leaked.  
-- 📡 **RPC** underpins efficient client–server communication.  
-- ⚡ **Multithreading** and **parallelization** reduce initialization and computation overhead.  
-- 📉 Accuracy: **88.8% (encrypted)** vs. **89.2% (unencrypted)**.  
-
----
-
 ## 🔐 Key Features
 
-- **Homomorphic Encryption (CKKS):** Enables secure computation on encrypted data.  
-- **Client–Server Protocol:** Ensures privacy for both the client’s raw inputs and the server’s trained model.  
-- **RPC Communication:** Lightweight, robust communication for inference requests.  
-- **Parallelization & Multithreading:** Optimized server-side initialization and computation for reduced latency.  
-- **Secure Non-linear Activations:** Delegated to client with controlled noise to prevent model reverse-engineering.  
-- **Performance:** Near-lossless accuracy with manageable inference time (~89.6s).  
+- **End-to-End Privacy:** Client’s raw medical data remains encrypted throughout inference using CKKS homomorphic encryption.  
+- **Model Confidentiality:** Server-side neural network parameters are fully protected, preventing exposure even during computation.  
+- **Encrypted Neural Network Inference:** Supports **secure linear layers (matrix multiplications)** directly on encrypted data; non-linear activations are securely delegated to the client with controlled noise to maintain model privacy.
+- **RPC Communication:** Reliable, low-latency client–server interaction facilitates encrypted inference.  
+- **Multithreading & Parallelization:** Neural network computations are parallelized for faster encrypted inference.  
+- **High Accuracy:** Achieves **88.8% accuracy on encrypted inference** vs. 89.2% baseline (only 0.4% drop), demonstrating minimal performance loss under encryption.  
+- **Performance:** Average inference time ~89.6 seconds with <200ms/layer communication overhead on 1Gbps, optimized for encrypted matrix operations.
 
 ---
 
@@ -66,19 +55,21 @@ Hyperparameters were tuned using **random search** to balance accuracy and effic
 ## 🔁 Protocol Workflow
 
 1. **Server Initialization**  
-   - Pre-encodes model weights and biases as CKKS plaintext.  
-   - Converts encoded parameters into byte objects for storage.  
-   - ⚡ Uses **multithreading** to parallelize encoding and serialization, significantly reducing initialization time.  
+   - Pre-encodes model weights and biases as CKKS plaintext (no encryption keys required at this stage).  
+   - Serializes encoded parameters into compact byte objects for efficient storage and reuse.  
+   - ⚡ Parallelized with **multithreading**, reducing computational overhead.  
 
 2. **Client Initialization**  
    - Generates encryption keys (public, private, relin).  
-   - Keys are stored locally; server never has access.  
+   - Keys remain local to the client; the server never has access.  
 
-3. **Prediction Phase**  
-   - Client encrypts inputs and sends them to server via **RPC**.  
-   - Server performs encrypted matrix multiplications.  
-   - Non-linear activations are delegated to the client (with controlled noise injection).  
-   - Final encrypted prediction is returned to client for decryption.  
+3. **Prediction Phase (Neural Network Inference)**  
+   - **Input Encryption:** Client encrypts feature vectors and sends them to the server via **RPC**.  
+   - **Layer Computation:** For each layer of the neural network, the server performs encrypted matrix multiplications with pre-encoded weights and biases.  
+   - **Non-linear Activations:** Since activations (ReLU, sigmoid, tanh) cannot be applied directly on encrypted data, the server securely delegates intermediate results to the client.  
+     - The client decrypts, applies the activation, re-encrypts, and sends results back.  
+     - Controlled noise is added by the server to prevent reverse-engineering of the model.  
+   - **Final Prediction:** Once the last layer is computed, the encrypted output is sent back to the client for decryption, yielding the disease prediction.  
 
 ---
 
@@ -96,8 +87,8 @@ Hyperparameters were tuned using **random search** to balance accuracy and effic
 | Output Layer              | 2.47     |
 | **Total Inference Time**  | **89.61** |
 
-- **Accuracy (Encrypted):** 88.8%  
-- **Accuracy (Plaintext):** 89.2%  
+- **Encrypted Accuracy:** 88.8%  
+- **Plaintext Accuracy:** 89.2%  
 - **Accuracy Loss:** 0.4%  
 - **Communication Overhead:** <200ms/layer on 1Gbps  
 
